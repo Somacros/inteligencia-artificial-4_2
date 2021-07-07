@@ -1,0 +1,149 @@
+#coding:utf-8
+
+import random
+
+# Use los siguientes 9 números para indicar la posición del tablero de ajedrez:
+# 0  1  2
+# 3  4  5
+# 6  7  8
+
+# Establecer la combinación ganadora (horizontal, vertical, diagonal)
+WINNING_TRIADS = ((0, 1, 2), (3, 4, 5), (6, 7, 8),
+                  (0, 3, 6), (1, 4, 7),(2, 5, 8),
+                  (0, 4, 8), (2, 4, 6))
+# Configure el tablero para imprimir tres líneas por línea
+PRINTING_TRIADS = ((0, 1, 2), (3, 4, 5), (6, 7, 8))
+# Use una lista unidimensional para representar el tablero de ajedrez:
+SLOTS = (0, 1, 2, 3, 4, 5, 6, 7, 8)
+# -1 significa X jugador 0 significa espacio vacío 1 significa O jugador.
+X_token = -1
+Open_token = 0
+O_token = 1
+
+MARKERS = ['_', 'O', 'X']
+END_PHRASE = ('dibujar', 'victoria', 'fracaso')
+
+
+def alpha_beta_valuation(board, player, next_player, alpha, beta):
+    
+    wnnr = winner(board)
+    if wnnr != Open_token:
+        # Algunos jugadores ganan
+        return wnnr
+    elif not legal_move_left(board):
+        # Sin asientos, dibujar
+        return 0
+    # Compruebe todos los puntos disponibles del jugador actual "jugador"
+    for move in SLOTS:
+        if board[move] == Open_token:
+            board[move] = player
+            # Intercambia jugadores después de soltar, continúa verificando
+            val = alpha_beta_valuation(board, next_player, player, alpha, beta)
+            board[move] = Open_token
+            if player == O_token:  # El jugador actual es O y es el jugador Max (el símbolo es 1)
+                if val > alpha:
+                    alpha = val
+                if alpha >= beta:
+                    return beta  # Devuelve directamente el valor máximo posible actual beta, poda
+            else:  # El jugador actual es X y Min (el símbolo es -1)
+                if val < beta:
+                    beta = val
+                if beta <= alpha:
+                    return alpha  # Devuelve directamente el valor alfa más pequeño actual posible, podando
+    if player == O_token:
+        retval = alpha
+    else:
+        retval = beta
+    return retval
+
+
+def print_board(board):
+    "" "Imprimir tablero actual" ""
+    for row in PRINTING_TRIADS:
+        r = ' '
+        for hole in row:
+            r += MARKERS[board[hole]] + ' '
+        print(r)
+
+
+def legal_move_left(board):
+    "" "Determine si todavía hay espacio en el tablero" ""
+    for slot in SLOTS:
+        if board[slot] == Open_token:
+            return True
+    return False
+
+
+def winner(board):
+    "" "Juzgando al ganador de la posición, el valor de retorno -1 significa que X gana, 1 significa O gana, 0 significa empate o no finalizó" ""
+    for triad in WINNING_TRIADS:
+        triad_sum = board[triad[0]] + board[triad[1]] + board[triad[2]]
+        if triad_sum == 3 or triad_sum == -3:
+            return board[triad[0]]  # Indica que el valor de la pieza de ajedrez también es -1: X, 1: O
+    return 0
+
+
+def determine_move(board):
+    "" "Determina el próximo movimiento de la computadora (jugador O), si la valoración es la misma, elija aleatoriamente el número de pasos" ""
+    best_val = -2  # El resultado de la evaluación de este programa es solo en [-1,0,1]
+    my_moves = []
+    print("Empieza a pensar")
+    for move in SLOTS:
+        if board[move] == Open_token:
+            board[move] = O_token
+            val = alpha_beta_valuation(board, X_token, O_token, -2, 2)
+            board[move] = Open_token
+            print("Si la computadora no funciona", move, ", Resultará en", END_PHRASE[val])
+            if val > best_val:
+                best_val = val
+                my_moves = [move]
+            if val == best_val:
+                my_moves.append(move)
+    return random.choice(my_moves)
+
+
+HUMAN = 1
+COMPUTER = 0
+
+
+def main():
+    "" "La función principal, primero decide quién es X (mano primero), luego comienza a jugar" ""
+    next_move = HUMAN
+    opt = input("Elija el primer movimiento, ingrese X para indicar el primer movimiento del jugador, ingrese O para indicar el primer movimiento de la computadora:")
+    if opt == "X":
+        next_move = HUMAN
+    elif opt == "O":
+        next_move = COMPUTER
+    else:
+        print("Entrada incorrecta, jugador predeterminado primero")
+
+    # Inicializar tablero vacío
+    board = [Open_token for i in range(9)]
+
+    # Comienza a jugar al ajedrez
+    while legal_move_left(board) and winner(board) == Open_token:
+        print()
+        print_board(board)
+        if next_move == HUMAN and legal_move_left(board):
+            try:
+                humanmv = int(input("Ingrese la ubicación (0-8) que desea jugar:"))
+                if board[humanmv] != Open_token:
+                    continue
+                board[humanmv] = X_token
+                next_move = COMPUTER
+            except:
+                print("Entrada incorrecta, por favor intente nuevamente")
+                continue
+        if next_move == COMPUTER and legal_move_left(board):
+            mymv = determine_move(board)
+            print("La computadora finalmente decidió jugar", mymv)
+            board[mymv] = O_token
+            next_move = HUMAN
+
+    # Resultado de salida
+    print_board(board)
+    print(["dibujar", "Computadora ganada", "tú ganas"][winner(board)])
+
+
+if __name__ == '__main__':
+    main()
